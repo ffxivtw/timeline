@@ -1,0 +1,23 @@
+.clock {
+  text-align: right;
+  font-family: var(--font-text);
+}
+
+.clock-time {
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.374px;
+  color: var(--ink);
+}
+
+.clock-date {
+  color: var(--ink-48);
+  font-size: 14px;
+  letter-spacing: -0.224px;
+}
+
+.clock-tz {
+  opacity: 0.8;
+}

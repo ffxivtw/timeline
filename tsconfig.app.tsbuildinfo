@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/clock.tsx","./src/components/comparisontable.tsx","./src/components/predictioncard.tsx","./src/components/timeline.tsx","./src/data/versions.ts","./src/lib/dates.test.ts","./src/lib/dates.ts","./src/lib/prediction.test.ts","./src/lib/prediction.ts"],"version":"5.9.3"}

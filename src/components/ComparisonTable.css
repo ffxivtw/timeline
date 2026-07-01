@@ -1,0 +1,77 @@
+.table-wrap {
+  overflow-x: auto;
+}
+
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  min-width: 560px;
+  font-family: var(--font-text);
+}
+
+.cmp-table th,
+.cmp-table td {
+  padding: var(--s-sm) var(--s-md);
+  text-align: left;
+  border-bottom: 1px solid var(--divider-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cmp-table thead th {
+  color: var(--ink-48);
+  font-weight: 600;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.cmp-table tbody th {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cmp-table tbody tr:hover {
+  background: var(--parchment);
+}
+
+.ver-num {
+  margin-right: var(--s-xs);
+}
+
+.ver-name {
+  color: var(--ink-48);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.cell-empty {
+  color: #c7c7cc;
+}
+
+/* 儲存格內的次要小字（各服版本間隔、跨服落後） */
+.cell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-48);
+}
+
+.cell-interval {
+  margin-top: 4px;
+}
+
+/* 最上方「現在」列 */
+.row-now {
+  background: var(--parchment);
+}
+
+.row-now th[scope='row'] .ver-num {
+  color: var(--primary, var(--ink));
+}
+
+.row-now .cell-interval {
+  margin-top: 0;
+  color: var(--ink-80);
+}

@@ -1,0 +1,139 @@
+/* ============================================================================
+ * Design tokens — 依 DESIGN.md（Apple 風格設計系統）
+ * 淺色為主、Action Blue 單一互動色、SF Pro/Inter、pill 控制項、hairline 邊框。
+ * ========================================================================== */
+:root {
+  /* Colors */
+  --primary: #0066cc;
+  --primary-focus: #0071e3;
+  --primary-on-dark: #2997ff;
+  --ink: #1d1d1f;
+  --ink-80: #333333;
+  --ink-48: #7a7a7a;
+  --divider-soft: #f0f0f0;
+  --hairline: #e0e0e0;
+  --canvas: #ffffff;
+  --parchment: #f5f5f7;
+  --pearl: #fafafc;
+  --tile-dark: #272729;
+  --on-dark: #ffffff;
+  --body-muted-on-dark: #cccccc;
+
+  /* 資料視覺化用的類別色（DESIGN.md 未涵蓋，屬功能性例外） */
+  --srv-global: #0066cc;
+  --srv-china: #d1495b;
+  --srv-korea: #2a9d8f;
+  --srv-tw: #e0912f;
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 18px;
+  --r-pill: 9999px;
+
+  /* Spacing */
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-md: 17px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+  --s-xxl: 48px;
+  --s-section: 80px;
+
+  /* 唯一的陰影：僅用於「浮起」的內容卡（近似 DESIGN.md 的 product shadow） */
+  --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter',
+    'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'PingFang TC',
+    'Microsoft JhengHei', system-ui, sans-serif;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: var(--font-text);
+  /* Body 17px / 400 / 1.47 / -0.374px — DESIGN.md 的招牌閱讀節奏 */
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.47;
+  letter-spacing: -0.374px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Layout ------------------------------------------------------------------- */
+.app {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: var(--s-xxl) var(--s-lg) var(--s-section);
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-md);
+  margin-bottom: var(--s-lg);
+}
+
+/* Hero display — 56px / 600 / 1.07 / -0.28px（Apple tight tracking） */
+.app-header h1 {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.07;
+  letter-spacing: -0.28px;
+  margin: 0;
+}
+
+/* 內容卡：白底、hairline 邊框、lg 圓角、無裝飾陰影 */
+.section {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  padding: var(--s-xl);
+  margin-bottom: var(--s-lg);
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.19;
+  letter-spacing: -0.224px;
+  margin: 0 0 var(--s-lg);
+}
+
+.app-footer {
+  color: var(--ink-48);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: -0.12px;
+  text-align: center;
+  margin-top: var(--s-xl);
+  padding-top: var(--s-md);
+}

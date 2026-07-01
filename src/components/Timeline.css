@@ -1,0 +1,180 @@
+.timeline {
+  --track-h: 56px;
+  --axis-h: 30px;
+  display: flex;
+  align-items: stretch;
+  font-family: var(--font-text);
+}
+
+/* 左側固定的伺服器名稱欄 */
+.tl-labels {
+  flex: 0 0 auto;
+  width: 72px;
+  border-right: 1px solid var(--hairline);
+}
+
+.tl-axis-spacer {
+  height: var(--axis-h);
+}
+
+.tl-label-cell {
+  height: var(--track-h);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  letter-spacing: -0.224px;
+  color: var(--ink-80);
+  padding-right: var(--s-sm);
+}
+
+.tl-dot-legend {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  flex: 0 0 auto;
+}
+
+/* 右側可橫向捲動的繪圖區 */
+.tl-plot-wrap {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding-bottom: var(--s-xs);
+}
+
+.tl-plot {
+  position: relative;
+}
+
+/* 時間軸刻度 */
+.tl-axis {
+  position: relative;
+  height: var(--axis-h);
+}
+
+.tl-axis-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--hairline);
+}
+
+.tl-tick {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tl-tick-mark {
+  order: 2;
+  width: 1px;
+  height: 5px;
+  background: var(--hairline);
+}
+
+.tl-tick-label {
+  order: 1;
+  font-size: 12px;
+  color: var(--ink-48);
+  letter-spacing: -0.12px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 2px;
+}
+
+.tl-track {
+  position: relative;
+  height: var(--track-h);
+}
+
+.tl-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--divider-soft);
+}
+
+/* 連續軸線（已上線區間） */
+.tl-line {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  border-radius: var(--r-pill);
+  opacity: 0.55;
+  z-index: 1;
+}
+
+/* 延伸到預估版本的虛線 */
+.tl-line-predicted {
+  background: transparent !important;
+  height: 0;
+  border-top: 2px dashed;
+  opacity: 0.6;
+}
+
+.tl-point {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: var(--r-pill);
+  transform: translate(-50%, -50%);
+  cursor: default;
+  z-index: 2;
+  box-shadow: 0 0 0 3px var(--canvas);
+}
+
+.tl-point-label {
+  position: absolute;
+  left: 50%;
+  top: -17px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--ink-80);
+  white-space: nowrap;
+  letter-spacing: -0.12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-point-predicted {
+  background: var(--canvas) !important;
+  border: 2px dashed;
+  opacity: 0.9;
+}
+
+.tl-predicted-label {
+  color: var(--ink-48);
+  font-style: italic;
+}
+
+/* 「現在」垂直線 — 單一 Action Blue 強調色 */
+.tl-now {
+  position: absolute;
+  top: var(--axis-h);
+  bottom: 0;
+  width: 2px;
+  background: var(--primary);
+  z-index: 3;
+}
+
+.tl-now-label {
+  position: absolute;
+  /* 上移到刻度帶，離第一條軌道（國際服）遠一點，避免和版本點標籤擠在一起 */
+  top: -19px;
+  left: 5px;
+  font-size: 12px;
+  color: var(--primary);
+  white-space: nowrap;
+  letter-spacing: -0.12px;
+  font-variant-numeric: tabular-nums;
+  /* 底色小膠囊：.tl-now z-index 較高，會乾淨蓋過刻度文字 */
+  background: var(--canvas);
+  padding: 1px 4px;
+  border-radius: var(--r-pill);
+}
