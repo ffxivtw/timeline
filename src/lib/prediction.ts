@@ -288,8 +288,9 @@ export function predictNext(
 
 export interface FutureRelease {
   version: string;
-  predictedDate: string; // 預估上線日 YYYY-MM-DD
+  predictedDate: string; // 上線日 YYYY-MM-DD（official=true 時為官方公告日，否則為預估）
   intervalDays: number; // 距前一版（實際或預估）的天數
+  official?: boolean; // true＝該服此版已有官方公告日期（非演算法預估），僅是尚未到來
 }
 
 // 連續推估該服「目前版本之後所有尚未上線版本」的上線日。
@@ -322,9 +323,20 @@ export function predictSequence(
   const out: FutureRelease[] = [];
   for (let idx = startIndex; idx < sorted.length; idx++) {
     const v = sorted[idx];
-    // 該版此服已有日期（少見：晚於目前版本卻已填）→ 推進基準後略過，不重複推估。
+    // 該版此服已有日期：官方已公告但尚未到來 → 以 official 呈現（非預估）；
+    // 已過去者（已上線）則推進基準後略過，交由對照表呈現，不列入預測。
     if (v.releases[server]) {
-      prev = parseDate(v.releases[server]!);
+      const known = parseDate(v.releases[server]!);
+      if (known.getTime() > now.getTime()) {
+        const intervalDays = prev ? daysBetween(prev, known) : 0;
+        out.push({
+          version: v.version,
+          predictedDate: v.releases[server]!,
+          intervalDays,
+          official: true,
+        });
+      }
+      prev = known;
       continue;
     }
     const gPrev = sorted[idx - 1]?.releases.global;

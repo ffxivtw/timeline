@@ -255,6 +255,25 @@ describe('predictSequence', () => {
     expect(seq[1].intervalDays).toBeGreaterThan(seq[0].intervalDays);
   });
 
+  it('surfaces already-known future dates as official entries, not predictions', () => {
+    // now=d(650) 時 tw 目前版本為 7.15(d560)；7.2 已有官方日期(d700，未來)，
+    // 應以 official=true、其實際日期呈現（而非被跳過），7.3 才是預估。
+    const withOfficial: Version[] = [
+      { version: '7.0', releases: { global: d(0), korea: d(50), tw: d(400) } },
+      { version: '7.1', releases: { global: d(100), korea: d(130), tw: d(480) } },
+      { version: '7.15', releases: { global: d(200), korea: d(210), tw: d(560) } },
+      { version: '7.2', releases: { global: d(300), korea: d(320), tw: d(700) } }, // 官方未來日期
+      { version: '7.3', releases: { global: d(400) } },
+    ];
+    const seq = predictSequence(withOfficial, 'tw', parseDate(d(650)));
+    expect(seq.map((r) => r.version)).toEqual(['7.2', '7.3']);
+    // 7.2：官方日期原樣呈現
+    expect(seq[0].official).toBe(true);
+    expect(seq[0].predictedDate).toBe(d(700));
+    // 7.3：仍為預估（非官方），且以 7.2 的實際日期為推估基準
+    expect(seq[1].official).toBeFalsy();
+  });
+
   it('returns empty when the server is fully caught up', () => {
     const done: Version[] = [{ version: '7.0', releases: { global: d(0), tw: d(10) } }];
     expect(predictSequence(done, 'tw', parseDate(d(100)))).toEqual([]);

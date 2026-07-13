@@ -92,7 +92,10 @@ export function Timeline({ versions, servers }: Props) {
             const tentative = sorted
               .filter((v) => v.releases[s.id] && v.tentative?.[s.id])
               .map((v) => ({ v, x: x(parseDate(v.releases[s.id]!)) }));
-            const seq = sequences[i].map((r) => ({ r, x: x(parseDate(r.predictedDate)) }));
+            // 官方公告日期已在 confirmed 以實心點呈現，這裡只畫「演算法預估」的空心點。
+            const seq = sequences[i]
+              .filter((r) => !r.official)
+              .map((r) => ({ r, x: x(parseDate(r.predictedDate)) }));
             const firstX = confirmed.length ? confirmed[0].x : 0;
             const lastX = confirmed.length ? confirmed[confirmed.length - 1].x : 0;
             // 虛線需延伸涵蓋所有「預估點」：tentative 日期 + 引擎推估點。

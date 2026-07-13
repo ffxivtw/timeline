@@ -34,17 +34,22 @@ export function PredictionCard({ versions, servers }: Props) {
         const daysAway = daysBetween(now, parseDate(r.predictedDate));
         return (
           <Fragment key={r.version}>
-            <li className="pred-row">
+            <li className={`pred-row${r.official ? ' pred-row-official' : ''}`}>
               <span className="pred-ver" style={{ color: meta.color }}>
                 {r.version}
               </span>
-              <span className="pred-date">{r.predictedDate}</span>
+              <span className="pred-date">
+                {r.predictedDate}
+                {r.official && <span className="pred-badge">官方公告</span>}
+              </span>
               <span className="pred-countdown">
                 {daysAway > 0
                   ? `約還有 ${daysAway} 天`
                   : daysAway === 0
-                    ? '預估就在今天'
-                    : `已超過預估 ${-daysAway} 天`}
+                    ? (r.official ? '就在今天' : '預估就在今天')
+                    : r.official
+                      ? `已上線 ${-daysAway} 天`
+                      : `已超過預估 ${-daysAway} 天`}
               </span>
             </li>
             {/* 版本之間的預估間距（下一版距本版的天數） */}
