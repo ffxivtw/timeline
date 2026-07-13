@@ -151,6 +151,21 @@ export function referenceCatchupRatio(
   return ratios.reduce((a, b) => a + b, 0) / ratios.length;
 }
 
+// 有效追趕比率：優先用目標服「自身」近期的追趕比率（該服已進入自身可觀測的節奏），
+// 自身歷史不足（< 2 個共同版本）時才退回韓/中的參考追趕比率。
+// 取代舊的「參考比率 × 手調積極度常數」——一旦目標服累積足夠共同版本，
+// 官方已知日期本身就是最準的校準來源，不需再借他服經驗或手調旋鈕。
+// recentN：自身比率只取最近 recentN+1 個共同版本（反映近期節奏）。
+export function effectiveCatchupRatio(
+  versions: Version[],
+  server: ServerId,
+  recentN?: number,
+): number | null {
+  const own = catchupRatio(versions, server, recentN);
+  if (own !== null) return own;
+  return referenceCatchupRatio(versions, server, recentN);
+}
+
 export type Confidence = 'high' | 'medium' | 'low';
 
 export interface Prediction {
@@ -160,7 +175,7 @@ export interface Prediction {
   predictedDate: string; // 預估上線日 YYYY-MM-DD
   predictedIntervalDays: number; // 距上一版的推估間隔天數
   ownIntervalDays: number | null; // 該服自身近期平均改版間隔
-  refRatio: number | null; // 使用的追趕加速係數（韓/中平均，<1 代表追趕時更快）
+  refRatio: number | null; // 使用的有效追趕比率（優先自校準，不足時取韓/中參考；<1 代表追趕時更快）
   lagDays: number | null; // 目前版本落後國際服天數（顯示用）
   method: 'blend' | 'own' | 'ref' | 'lag'; // 推估方式
   confidence: Confidence;
@@ -168,20 +183,18 @@ export interface Prediction {
 
 const DEFAULT_N = 3;
 
-// 追趕積極度：套在「參考追趕比率」之上的校準係數（effective = refRatio × 此值）。
-// < 1 代表比韓/中的平均追趕更積極（落後越多、追趕越猛），使預估更早。
-// 校準基準：繁中目前 7.15（2026-06-23），假設 7.2 落在 7 月底（2026-07-28，+35 天）
-// 反推得約 0.44（0.42–0.45 因對齊週二會落在同一天，取中間值較穩健）。
-// 匯出供測試以此推導期望值，避免每次微調校準就要改一堆硬編數字。
-export const CATCHUP_AGGRESSIVENESS = 0.44;
+// 自校準追趕比率的取樣視窗：只看目標服「最近 CATCHUP_WINDOW 段」共同版本，
+// 反映其近期節奏（前期猛追、後期回穩）而非整段平均。繁中近 2 段比率 ≈ 0.609。
+const CATCHUP_WINDOW = 2;
 
 // 預估指定服的下個版本上線日（混合模型）。
 // 目標版本＝依國際服排序後，該服目前版本「之後」第一個尚未上線的版本。
 //
-// 以「該服自身近期改版節奏」乘上「參考韓/中的追趕加速係數」得下一版間隔，
+// 以「該服自身近期改版節奏」乘上「有效追趕比率」得下一版間隔，
 // 加到該服上一版日期得預估日；並以國際服該版日期為下限（不可早於來源）。
-// 追趕加速係數 < 1，代表落後服在追趕期間會比自身歷史節奏更快（如韓/中收尾階段）。
-//  - blend：自身節奏 × 追趕加速係數（兩者都有）。
+// 有效追趕比率 < 1，代表落後服在追趕期間會比自身歷史節奏更快；優先用該服自身
+// 近期比率（自校準），自身歷史不足時才退回韓/中參考比率。
+//  - blend：自身節奏 × 有效追趕比率（兩者都有）。
 //  - own / ref：僅其中一種可用（own=自身節奏；ref=國際服間隔 × 係數）。
 //  - lag：都不可用時，退回「國際服日期 + 平均落後天數」。
 // 該服已上線所有已知版本、或完全無資料可推估時回 null。
@@ -206,23 +219,24 @@ export function predictNext(
   const globalInterval = gCur && gNext ? daysBetween(parseDate(gCur), parseDate(gNext)) : null;
 
   const ownInterval = serverCadence(versions, server, n, excludeCadenceVersions);
-  const refRatio = referenceCatchupRatio(versions, server);
+  // 有效追趕比率：優先自校準（該服自身近期），不足時退回韓/中參考。
+  const refRatio = effectiveCatchupRatio(versions, server, CATCHUP_WINDOW);
   const canRef = refRatio !== null && globalInterval !== null;
 
   const lastServer = current?.releases[server];
 
-  // 主要路徑：以自身節奏 × 追趕加速係數推估「距上一版的間隔」。
+  // 主要路徑：以自身節奏 × 有效追趕比率推估「距上一版的間隔」。
   if (lastServer && (ownInterval !== null || canRef)) {
     let interval: number;
     let method: Prediction['method'];
     if (ownInterval !== null && refRatio !== null) {
-      interval = Math.round(ownInterval * refRatio * CATCHUP_AGGRESSIVENESS);
+      interval = Math.round(ownInterval * refRatio);
       method = 'blend';
     } else if (ownInterval !== null) {
       interval = ownInterval;
       method = 'own';
     } else {
-      interval = Math.round(globalInterval! * refRatio! * CATCHUP_AGGRESSIVENESS);
+      interval = Math.round(globalInterval! * refRatio!);
       method = 'ref';
     }
 
@@ -280,7 +294,7 @@ export interface FutureRelease {
 
 // 連續推估該服「目前版本之後所有尚未上線版本」的上線日。
 //
-// 每一段間隔＝「國際服該段間隔 × 追趕加速係數」，逐段累加、各自以國際服日期為下限。
+// 每一段間隔＝「國際服該段間隔 × 有效追趕比率」，逐段累加、各自以國際服日期為下限。
 // 這樣會沿用國際服各段的「形狀」：小改版短、資料片交界（x.55→(x+1).0）長，
 // 而非一律套同一個平均步進。全程加總 = 國際服剩餘跨距 × 係數，與 catchupRatio 定義一致。
 // 缺追趕係數或國際服日期時，退回自身平均節奏；再不行則用「國際服日期 + 平均落後」。
@@ -297,9 +311,9 @@ export function predictSequence(
   if (!sorted.slice(startIndex).some((v) => !v.releases[server])) return []; // 已無可推估版本
 
   const ownInterval = serverCadence(versions, server, n, excludeCadenceVersions);
-  const refRatio = referenceCatchupRatio(versions, server);
   // 追趕係數：國際服各段間隔 × 此係數 = 該服對應段的預估間隔。
-  const catchup = refRatio !== null ? refRatio * CATCHUP_AGGRESSIVENESS : null;
+  // 優先用該服自身近期比率（自校準），不足時退回韓/中參考。
+  const catchup = effectiveCatchupRatio(versions, server, CATCHUP_WINDOW);
 
   const avgLag = averageLag(versions, server, n);
   const weekday = dominantWeekday(versions, server, excludeCadenceVersions);

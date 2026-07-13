@@ -11,16 +11,12 @@ import {
   serverCadence,
   catchupRatio,
   referenceCatchupRatio,
+  effectiveCatchupRatio,
   predictNext,
   predictSequence,
   dominantWeekday,
   snapToWeekday,
-  CATCHUP_AGGRESSIVENESS,
 } from './prediction';
-
-// 追趕係數固定為 refRatio(此測試資料 0.8) × 積極度；以常數推導期望值，
-// 之後微調 CATCHUP_AGGRESSIVENESS 校準時不必逐一改硬編數字。
-const AGGR = CATCHUP_AGGRESSIVENESS;
 
 // 以「距 2024-01-01 的天數」構造日期，讓區間/比率乾淨可驗。
 const B = '2024-01-01';
@@ -110,6 +106,33 @@ describe('catchupRatio / referenceCatchupRatio', () => {
   });
 });
 
+describe('effectiveCatchupRatio', () => {
+  it('uses the server own recent catch-up ratio when it has enough history', () => {
+    // tw 自身 3 個共同版本(7.0/7.1/7.2)：近 2 段 span = 400→560 = 160，global 0→200 = 200 -> 0.8
+    // 應優先採用自身比率，而非參考服，也不再乘任何積極度常數。
+    expect(effectiveCatchupRatio(data, 'tw', 2)).toBeCloseTo(0.8, 5);
+  });
+
+  it('falls back to referenceCatchupRatio when the server lacks its own history', () => {
+    // 目標服只有一個共同版本 -> 無法算自身比率 -> 退回韓服參考(0.8)。
+    const thin: Version[] = [
+      { version: '7.0', releases: { global: d(0), korea: d(50), tw: d(400) } },
+      { version: '7.1', releases: { global: d(100), korea: d(130) } },
+      { version: '7.2', releases: { global: d(200), korea: d(210) } },
+      { version: '7.3', releases: { global: d(300) } },
+    ];
+    expect(effectiveCatchupRatio(thin, 'tw', 2)).toBeCloseTo(0.8, 5);
+  });
+
+  it('returns null when neither own nor reference ratio is available', () => {
+    const lone: Version[] = [
+      { version: '7.0', releases: { global: d(0), tw: d(400) } },
+      { version: '7.1', releases: { global: d(100) } },
+    ];
+    expect(effectiveCatchupRatio(lone, 'tw', 2)).toBeNull();
+  });
+});
+
 describe('predictNext (hybrid)', () => {
   it('accelerates own cadence by the reference catch-up ratio', () => {
     const p = predictNext(data, 'tw', parseDate(d(600)));
@@ -118,23 +141,39 @@ describe('predictNext (hybrid)', () => {
     expect(p!.nextVersion).toBe('7.3');
     expect(p!.method).toBe('blend');
     expect(p!.ownIntervalDays).toBe(80); // tw 自身節奏
-    expect(p!.refRatio).toBeCloseTo(0.8, 5); // korea 追趕係數
-    // predictNext 仍為舊模型：round(自身節奏 80 × ratio 0.8 × 積極度)
-    const nextInterval = Math.round(80 * 0.8 * AGGR);
+    expect(p!.refRatio).toBeCloseTo(0.8, 5); // tw 自身近期追趕比率（自校準；此資料恰與 korea 相同）
+    // 新模型：round(自身節奏 80 × 有效追趕比率 0.8)，不再乘積極度常數
+    const nextInterval = Math.round(80 * 0.8);
     expect(p!.predictedIntervalDays).toBe(nextInterval);
     // 上一版 tw 7.2 = d(560)（此測試資料無固定星期，不對齊）
     expect(p!.predictedDate).toBe(d(560 + nextInterval));
   });
 
-  it('uses own cadence only when no reference server exists', () => {
+  it('self-calibrates from its own catch-up ratio even with no reference server', () => {
+    // 移除所有其他落後服後，仍可用 tw「自身」近期追趕比率（0.8）自校準，
+    // 不必退回未加速的原始節奏（method 仍為 blend）。
     const noRef = data.map((v) => ({
       ...v,
       releases: { global: v.releases.global, tw: v.releases.tw },
     }));
     const p = predictNext(noRef, 'tw', parseDate(d(600)));
+    expect(p!.method).toBe('blend');
+    expect(p!.refRatio).toBeCloseTo(0.8, 5); // tw 自身近期比率
+    expect(p!.predictedDate).toBe(d(624)); // 560 + round(80 × 0.8)
+  });
+
+  it('uses raw own cadence when no catch-up ratio can be derived', () => {
+    // 有自身節奏(80) 但算不出追趕比率（國際服跨距為 0）、也無參考服
+    // → 退回未加速的原始節奏（method='own'）。
+    const own: Version[] = [
+      { version: '7.0', releases: { global: d(0), tw: d(400) } },
+      { version: '7.05', releases: { global: d(0), tw: d(480) } }, // 同一 global 日 → globalSpan=0
+      { version: '7.1', releases: { global: d(100) } },
+    ];
+    const p = predictNext(own, 'tw', parseDate(d(600)));
     expect(p!.method).toBe('own');
     expect(p!.refRatio).toBeNull();
-    expect(p!.predictedDate).toBe(d(640)); // 560 + 80（未加速）
+    expect(p!.predictedDate).toBe(d(560)); // 480 + 80（未加速）
   });
 
   it('floors the prediction at the global release date of that version', () => {
@@ -174,8 +213,8 @@ describe('dominantWeekday / snapToWeekday', () => {
 });
 
 describe('predictSequence', () => {
-  // 每段間隔 = round(國際服該段間隔 × ratio 0.8 × 積極度)。
-  const seg = (globalGap: number) => Math.round(globalGap * 0.8 * AGGR);
+  // 每段間隔 = round(國際服該段間隔 × 有效追趕比率 0.8)。
+  const seg = (globalGap: number) => Math.round(globalGap * 0.8);
 
   it('chains each segment at the global segment length × catch-up ratio', () => {
     const seq = predictSequence(data, 'tw', parseDate(d(600)));
